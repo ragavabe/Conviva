@@ -24,6 +24,34 @@ class ConvivaState extends ChangeNotifier {
   final List<RideRequest> _rides = [];
   List<RideRequest> get rides => List.unmodifiable(_rides);
 
+  // Acessibilidade: Tamanho de fonte ampliado para idosos
+  double _textScaleFactor = 1.0;
+  double get textScaleFactor => _textScaleFactor;
+  bool get isLargeText => _textScaleFactor > 1.1;
+
+  void toggleTextScale() {
+    _textScaleFactor = _textScaleFactor == 1.0 ? 1.25 : 1.0;
+    notifyListeners();
+  }
+
+  // Assistente de Voz / Leitura de Tela (Audio Assist)
+  bool _isSpeaking = false;
+  String? _currentSpeech;
+  bool get isSpeaking => _isSpeaking;
+  String? get currentSpeech => _currentSpeech;
+
+  void speak(String text) {
+    _isSpeaking = true;
+    _currentSpeech = text;
+    notifyListeners();
+  }
+
+  void stopSpeaking() {
+    _isSpeaking = false;
+    _currentSpeech = null;
+    notifyListeners();
+  }
+
   void _initSeedData() {
     // Inicia sem usuário autenticado para exibir a tela de login como porta de entrada
     _currentUser = null;
@@ -485,8 +513,8 @@ class ConvivaState extends ChangeNotifier {
     required String eventId,
     required String eventTitle,
     required String destinationAddress,
-    required String pickupAddress,
-    required String scheduledTime,
+    String pickupAddress = 'Rua das Palmeiras, 120 - Apto 42',
+    String scheduledTime = '13h30',
   }) {
     final newRide = RideRequest(
       id: 'ride_${DateTime.now().millisecondsSinceEpoch}',

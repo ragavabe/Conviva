@@ -14,6 +14,120 @@ class EventDetailsScreen extends StatefulWidget {
 }
 
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  void _showCelebrationDialog(BuildContext context, String title) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: const BoxDecoration(
+                color: ConvivaColors.pineGreenLight,
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Text('🎉', style: TextStyle(fontSize: 42)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Presença Confirmada!',
+              style: ConvivaTypography.titleSerifMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Parabéns por participar!\nSua vaga está garantida no:\n"$title".\n\nNossos amigos já estão ansiosos pela sua chegada!',
+              style: const TextStyle(
+                fontSize: 16,
+                color: ConvivaColors.textPrimary,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ConvivaColors.pineGreen,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Excelente! ✨', style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showShareWhatsAppDialog(BuildContext context, ConvivaEvent event) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: const [
+            Icon(Icons.chat_bubble_rounded, color: Color(0xFF25D366), size: 28),
+            SizedBox(width: 10),
+            Text('Convidar no WhatsApp', style: ConvivaTypography.titleSerifSmall),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Envie um convite carinhoso para seus amigos da família, da igreja ou do bairro:',
+              style: TextStyle(fontSize: 15, color: ConvivaColors.textPrimary),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFBBF7D0)),
+              ),
+              child: Text(
+                'Olá! Gostaria de te convidar para ir comigo no "${event.title}", dia ${event.dateFormatted}, no local ${event.location}. Vai ser uma tarde maravilhosa no Conviva! Vamos?',
+                style: const TextStyle(fontSize: 14, color: Color(0xFF166534), height: 1.3),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Convite preparado para envio via WhatsApp! 📲'),
+                  backgroundColor: Color(0xFF25D366),
+                ),
+              );
+            },
+            icon: const Icon(Icons.send_rounded, size: 18),
+            label: const Text('Enviar Convite'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF25D366),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ConvivaState.instance;
@@ -32,32 +146,88 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // BANNER SUPERIOR COM COR DINÂMICA
+                // BANNER SUPERIOR VIBRANTE COM CATEGORIA E ÁUDIO
                 Container(
                   color: event.headerColor,
-                  padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
+                  padding: const EdgeInsets.fromLTRB(20, 48, 20, 28),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Botão Voltar Circular
-                      InkWell(
-                        onTap: () => Navigator.pop(context),
-                        borderRadius: BorderRadius.circular(24),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            shape: BoxShape.circle,
+                      // Linha de navegação superior (Voltar + Áudio + Categoria)
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            borderRadius: BorderRadius.circular(24),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(
+                                    Icons.arrow_back_ios_new_rounded,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Voltar',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
+                          const Spacer(),
+                          // Botão de Leitura em Voz Alta
+                          IconButton(
+                            onPressed: () {
+                              state.speak(
+                                'Detalhes de ${event.title}. Dia ${event.dateFormatted}, no local ${event.location}. ${event.description}',
+                              );
+                            },
+                            tooltip: 'Ouvir detalhes deste evento',
+                            icon: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.volume_up_rounded,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Tag de categoria
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.25),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          event.category.toUpperCase(),
+                          style: const TextStyle(
                             color: Colors.white,
-                            size: 20,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 10),
                       Text(
                         event.title,
                         style: const TextStyle(
@@ -72,69 +242,106 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                 ),
 
-                // CORPO DO EVENTO (Fundo Creme)
+                // CORPO DO EVENTO
                 Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildInfoRow(
-                        icon: Icons.calendar_today_outlined,
-                        text: event.dateFormatted,
+                      // Data e Horário com destaque
+                      _buildInfoTile(
+                        icon: Icons.calendar_month_rounded,
+                        title: 'Quando acontece',
+                        subtitle: event.dateFormatted,
+                        badgeText: event.distance,
                       ),
-                      const SizedBox(height: 14),
-                      _buildInfoRow(
-                        icon: Icons.place_outlined,
-                        text: event.location,
+                      const SizedBox(height: 12),
+
+                      // Localização
+                      _buildInfoTile(
+                        icon: Icons.place_rounded,
+                        title: 'Onde será',
+                        subtitle: event.location,
+                        iconColor: ConvivaColors.terracotta,
                       ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 18),
-                        child: Divider(
-                          color: ConvivaColors.divider,
-                          thickness: 1,
+                      const SizedBox(height: 20),
+
+                      // COMODIDADES & ACESSIBILIDADE PARA IDOSOS
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: ConvivaColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Acessibilidade e Conforto no Local',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: ConvivaColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: const [
+                                _AmenityBadge(icon: '♿', label: 'Rampa de Acesso'),
+                                _AmenityBadge(icon: '🪑', label: 'Assentos Confortáveis'),
+                                _AmenityBadge(icon: '☕', label: 'Café & Lanche Grátis'),
+                                _AmenityBadge(icon: '🚗', label: 'Carona Solidária'),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
+                      const SizedBox(height: 20),
+
+                      // DESCRIÇÃO
+                      const Text(
+                        'Sobre esta atividade',
+                        style: ConvivaTypography.titleSerifSmall,
+                      ),
+                      const SizedBox(height: 8),
                       Text(
                         event.description,
                         style: const TextStyle(
                           fontSize: 16,
                           color: ConvivaColors.textPrimary,
-                          height: 1.5,
+                          height: 1.55,
                         ),
                       ),
                       const SizedBox(height: 24),
 
-                      // BOTÕES DE AÇÃO POR STATUS
+                      // BOTÕES PRINCIPAIS DE AÇÃO
                       if (event.status == EventStatus.upcoming) ...[
                         if (!event.isUserParticipating) ...[
-                          ElevatedButton(
+                          ElevatedButton.icon(
                             onPressed: () {
                               state.toggleEventParticipation(event.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Presença confirmada no "${event.title}"!',
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
-                                  backgroundColor: ConvivaColors.pineGreen,
-                                ),
-                              );
+                              _showCelebrationDialog(context, event.title);
                             },
+                            icon: const Icon(Icons.thumb_up_alt_rounded, size: 20),
+                            label: const Text(
+                              'Confirmar Minha Presença (Grátis)',
+                              style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: ConvivaColors.pineGreen,
+                              minimumSize: const Size(double.infinity, 54),
                             ),
-                            child: const Text('Confirmar presença'),
                           ),
                         ] else ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                             decoration: BoxDecoration(
                               color: ConvivaColors.pineGreenLight,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: ConvivaColors.pineGreen),
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: ConvivaColors.pineGreen, width: 1.5),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -142,11 +349,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                                 Icon(
                                   Icons.check_circle_rounded,
                                   color: ConvivaColors.pineGreen,
-                                  size: 24,
+                                  size: 26,
                                 ),
-                                SizedBox(width: 8),
+                                SizedBox(width: 10),
                                 Text(
-                                  'Você está participando!',
+                                  'Sua presença está confirmada! 🎉',
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
@@ -157,136 +364,65 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          TextButton(
-                            onPressed: () {
-                              state.toggleEventParticipation(event.id);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Participação cancelada.'),
+                          Center(
+                            child: TextButton(
+                              onPressed: () {
+                                state.toggleEventParticipation(event.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Participação cancelada.')),
+                                );
+                              },
+                              child: const Text(
+                                'Cancelar minha presença',
+                                style: TextStyle(
+                                  color: ConvivaColors.terracotta,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                              );
-                            },
-                            child: const Text(
-                              'Cancelar participação',
-                              style: TextStyle(
-                                color: ConvivaColors.terracotta,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                         ],
                       ],
 
-                      if (event.status == EventStatus.full) ...[
-                        OutlinedButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Você foi adicionado à lista de espera com sucesso!',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                                backgroundColor: ConvivaColors.terracotta,
-                              ),
-                            );
-                          },
-                          child: const Text('Entrar na lista de espera'),
+                      const SizedBox(height: 12),
+
+                      // BOTÃO CONVIDAR AMIGOS NO WHATSAPP
+                      OutlinedButton.icon(
+                        onPressed: () => _showShareWhatsAppDialog(context, event),
+                        icon: const Icon(Icons.chat_bubble_outline_rounded,
+                            size: 20, color: Color(0xFF25D366)),
+                        label: const Text(
+                          'Convidar Amigos no WhatsApp 📲',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                         ),
-                      ],
-
-                      if (event.status == EventStatus.completed) ...[
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: ConvivaColors.ochreLight,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: ConvivaColors.ochre.withValues(alpha: 0.4),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Este evento já aconteceu.',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.bold,
-                                  color: ConvivaColors.textPrimary,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                'Você esteve presente?',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: ConvivaColors.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        state.confirmPastAttendance(
-                                          event.id,
-                                          false,
-                                        );
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text('Obrigado pelo feedback!'),
-                                          ),
-                                        );
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        backgroundColor: Colors.white,
-                                      ),
-                                      child: const Text('Não estive'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        state.confirmPastAttendance(
-                                          event.id,
-                                          true,
-                                        );
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Presença confirmada! Que ótimo ter você por lá.',
-                                            ),
-                                            backgroundColor: ConvivaColors.pineGreen,
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: ConvivaColors.pineGreen,
-                                      ),
-                                      child: const Text('Sim, estive lá'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          side: const BorderSide(color: Color(0xFF25D366), width: 1.5),
+                          backgroundColor: Colors.white,
                         ),
-                      ],
-
-                      const SizedBox(height: 32),
-
-                      // SEÇÃO DE PARTICIPANTES
-                      Text(
-                        event.status == EventStatus.completed
-                            ? 'Quem esteve presente (${event.confirmedCount})'
-                            : (event.status == EventStatus.full
-                                  ? 'Participantes confirmados (${event.confirmedCount})'
-                                  : 'Quem já confirmou (${event.confirmedCount})'),
-                        style: ConvivaTypography.titleSerifMedium,
                       ),
-                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 24),
+
+                      // CARD DE CARONA SOLIDÁRIA
+                      _buildTransportPromptCard(event),
+
+                      const SizedBox(height: 28),
+
+                      // SEÇÃO DE PARTICIPANTES (QUEM JÁ CONFIRMOU)
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Quem já confirmou (${event.confirmedCount})',
+                            style: ConvivaTypography.titleSerifSmall,
+                          ),
+                          const Text('👥 Amigos do Conviva',
+                              style: TextStyle(fontSize: 13, color: ConvivaColors.textSecondary)),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
 
                       ...event.participants.map(
                         (p) => Padding(
@@ -294,13 +430,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           child: _buildParticipantTile(event.id, p),
                         ),
                       ),
-
-                      // Opção de Carona
-                      if (event.status == EventStatus.upcoming &&
-                          event.isUserParticipating) ...[
-                        const SizedBox(height: 24),
-                        _buildTransportPromptCard(event),
-                      ],
                     ],
                   ),
                 ),
@@ -312,30 +441,74 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildInfoRow({required IconData icon, required String text}) {
-    return Row(
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: const Color(0xFFEFE8D8),
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    Color iconColor = ConvivaColors.pineGreen,
+    String? badgeText,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: ConvivaColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-          child: Icon(icon, color: ConvivaColors.textPrimary, size: 22),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: ConvivaColors.textPrimary,
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: ConvivaColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: ConvivaColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          if (badgeText != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: ConvivaColors.pineGreenLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                badgeText,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: ConvivaColors.pineGreenText,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -397,14 +570,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: participant.isFriend
-                    ? ConvivaColors.pineGreenLight
-                    : Colors.white,
+                color: participant.isFriend ? ConvivaColors.pineGreenLight : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: participant.isFriend
-                      ? ConvivaColors.pineGreen
-                      : ConvivaColors.border,
+                  color: participant.isFriend ? ConvivaColors.pineGreen : ConvivaColors.border,
                 ),
               ),
               child: Row(
@@ -419,7 +588,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    participant.isFriend ? 'Adicionado' : 'Adicionar',
+                    participant.isFriend ? 'Amigo(a) ✓' : 'Adicionar',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
@@ -473,19 +642,30 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Você gostaria de ser buscado em casa para este evento?',
+            'Você gostaria de ser buscado em casa para este evento com segurança?',
             style: TextStyle(fontSize: 14, color: ConvivaColors.textSecondary),
           ),
           const SizedBox(height: 14),
           if (existingRide == null) ...[
             ElevatedButton.icon(
               onPressed: () {
-                _showRequestRideDialog(context, event);
+                state.requestRide(
+                  eventId: event.id,
+                  eventTitle: event.title,
+                  destinationAddress: event.location,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Carona solicitada com sucesso! 🚗'),
+                    backgroundColor: ConvivaColors.pineGreen,
+                  ),
+                );
               },
-              icon: const Icon(Icons.hail_rounded),
-              label: const Text('Preciso de transporte'),
+              icon: const Icon(Icons.hail_rounded, size: 18),
+              label: const Text('Solicitar Carona Grátis 🚗'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ConvivaColors.pineGreen,
+                minimumSize: const Size(double.infinity, 48),
               ),
             ),
           ] else ...[
@@ -493,22 +673,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: ConvivaColors.pineGreenLight,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.info_outline,
-                    color: ConvivaColors.pineGreen,
-                  ),
+                  const Icon(Icons.check_circle_rounded, color: ConvivaColors.pineGreen),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Status: ${existingRide.statusLabel}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: ConvivaColors.pineGreenText,
-                      ),
+                      'Carona solicitada (${existingRide.statusLabel})',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ),
                 ],
@@ -519,78 +693,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       ),
     );
   }
+}
 
-  void _showRequestRideDialog(BuildContext context, ConvivaEvent event) {
-    final state = ConvivaState.instance;
-    final user = state.currentUser;
-    final addressCtrl = TextEditingController(
-      text: user?.address ?? 'Rua das Camélias, 120 - Jardim das Flores',
-    );
+class _AmenityBadge extends StatelessWidget {
+  final String icon;
+  final String label;
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text(
-          'Solicitar Carona Solidária',
-          style: ConvivaTypography.titleSerifMedium,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Um motorista voluntário do CONVIVA buscará você no endereço abaixo:',
-              style: TextStyle(fontSize: 14),
+  const _AmenityBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: ConvivaColors.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: ConvivaColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 14)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: ConvivaColors.textPrimary,
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: addressCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Endereço de partida',
-                prefixIcon: Icon(Icons.home_outlined),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Destino: ${event.location}',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: ConvivaColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              state.requestRide(
-                eventId: event.id,
-                eventTitle: event.title,
-                destinationAddress: event.location,
-                pickupAddress: addressCtrl.text.trim(),
-                scheduledTime: '13:30',
-              );
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Transporte solicitado! Os motoristas parceiros já receberam sua solicitação.',
-                  ),
-                  backgroundColor: ConvivaColors.pineGreen,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ConvivaColors.pineGreen,
-              minimumSize: const Size(120, 48),
-            ),
-            child: const Text('Confirmar Solicitação'),
           ),
         ],
       ),

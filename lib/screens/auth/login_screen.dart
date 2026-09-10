@@ -548,6 +548,73 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _showSignupOptionsModal,
                     child: const Text('Criar nova conta'),
                   ),
+                  const SizedBox(height: 24),
+                  InkWell(
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                          title: Row(
+                            children: const [
+                              Icon(
+                                Icons.support_agent_rounded,
+                                color: ConvivaColors.pineGreen,
+                                size: 28,
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                'Apoio ao Usuário',
+                                style: ConvivaTypography.titleSerifSmall,
+                              ),
+                            ],
+                          ),
+                          content: const Text(
+                            'Olá! Se você tiver qualquer dúvida ou dificuldade para entrar no aplicativo, nosso time comunitário está pronto para te apoiar com todo carinho:\n\n📞 Telefone / WhatsApp: (11) 98765-4321',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: ConvivaColors.textPrimary,
+                              height: 1.45,
+                            ),
+                          ),
+                          actions: [
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: ConvivaColors.pineGreen,
+                              ),
+                              child: const Text('Entendi, obrigado! ✨'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(
+                            Icons.help_outline_rounded,
+                            size: 18,
+                            color: ConvivaColors.textSecondary,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Precisa de ajuda para entrar? Toque aqui',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: ConvivaColors.textSecondary,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

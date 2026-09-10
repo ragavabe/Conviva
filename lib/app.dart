@@ -102,6 +102,14 @@ class ConvivaApp extends StatelessWidget {
               ),
             ),
           ),
+          builder: (context, child) {
+            return MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: TextScaler.linear(ConvivaState.instance.textScaleFactor),
+              ),
+              child: child!,
+            );
+          },
           home: const RootGate(),
         );
       },

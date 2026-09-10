@@ -56,6 +56,8 @@ class ConvivaEvent {
     this.userConfirmedAttendance = false,
   });
 
+  int get attendeesCount => confirmedCount;
+
   Color get headerColor {
     switch (status) {
       case EventStatus.upcoming:
