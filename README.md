@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # conviva
 
 A new Flutter project.
@@ -17,5 +16,5 @@ For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
 =======
+
 # Conviva
->>>>>>> 98ee60e5e6991c070a10f22e644cde68f39d717c
