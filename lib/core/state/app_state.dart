@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../models/pessoa.dart';
 import '../../models/evento.dart';
 
@@ -81,6 +82,46 @@ class AppState extends ChangeNotifier {
     if (user == null || e.realizado || e.lotado) return false;
     if (e.participantes.contains(user.nome)) return false;
     e.participantes.add(user.nome);
+    notifyListeners();
+    return true;
+  }
+
+  /// Marca ou desmarca o comparecimento de uma pessoa inscrita.
+  void alternarPresenca(Evento e, String participante) {
+    if (!e.participantes.contains(participante)) return;
+    if (!e.presentes.add(participante)) {
+      e.presentes.remove(participante);
+    }
+    notifyListeners();
+  }
+
+  /// Inclui uma inscrição feita pelo telefone ou no balcão.
+  bool adicionarParticipanteManual(Evento e, String nome) {
+    final nomeLimpo = nome.trim();
+    if (nomeLimpo.isEmpty || e.realizado || e.lotado) return false;
+    if (e.participantes.any(
+      (participante) => participante.toLowerCase() == nomeLimpo.toLowerCase(),
+    )) {
+      return false;
+    }
+    e.participantes.add(nomeLimpo);
+    notifyListeners();
+    return true;
+  }
+
+  /// Remove uma inscrição e também qualquer check-in associado a ela.
+  bool removerParticipante(Evento e, String nome) {
+    if (!e.participantes.remove(nome)) return false;
+    e.presentes.remove(nome);
+    notifyListeners();
+    return true;
+  }
+
+  /// Cancela a inscrição do usuário atual, liberando a vaga imediatamente.
+  bool cancelarParticipacao(Evento e) {
+    final user = usuarioLogado;
+    if (user == null || !e.participantes.remove(user.nome)) return false;
+    e.presentes.remove(user.nome);
     notifyListeners();
     return true;
   }
