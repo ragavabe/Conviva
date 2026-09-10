@@ -1,8 +1,9 @@
+import 'package:conviva/screens/auth/login_screen.dart';
 import 'package:flutter/material.dart';
+
 import 'core/state/app_state.dart';
 import 'core/theme/app_theme.dart';
 import 'models/tipo_usuario.dart';
-import 'screens/auth/login_flow.dart';
 import 'screens/motorista/motorista_em_breve_page.dart';
 import 'screens/organizador/organizador_dashboard.dart';
 import 'screens/usuario/lista_eventos_page.dart';
@@ -33,7 +34,7 @@ class RootGate extends StatelessWidget {
       animation: AppState.instance,
       builder: (context, _) {
         final user = AppState.instance.usuarioLogado;
-        if (user == null) return const LoginFlow();
+        if (user == null) return const LoginScreen();
         if (user.tipo == TipoUsuario.organizador) {
           return const OrganizadorDashboard();
         }
