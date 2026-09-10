@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../core/colors.dart';
-import '../../core/typography.dart';
-import '../../core/state.dart';
-import '../../models/app_user.dart';
-import '../auth/login_screen.dart';
-import '../senior/senior_main_shell.dart';
-import '../organizer/organizer_main_shell.dart';
-import '../driver/driver_main_shell.dart';
+import 'core/colors.dart';
+import 'core/typography.dart';
+import 'core/state.dart';
+import 'models/app_user.dart';
+import 'screens/auth/login_screen.dart';
+import 'screens/senior/senior_main_shell.dart';
+import 'screens/organizer/organizer_main_shell.dart';
+import 'screens/driver/driver_main_shell.dart';
 
 class ConvivaApp extends StatelessWidget {
   const ConvivaApp({super.key});

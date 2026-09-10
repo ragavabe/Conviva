@@ -3,7 +3,6 @@ import '../../core/colors.dart';
 import '../../core/typography.dart';
 import '../../core/state.dart';
 import '../../models/event.dart';
-import '../../models/ride.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final String eventId;

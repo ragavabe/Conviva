@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:conviva/main.dart';
+import 'package:conviva/app.dart';
 
 void main() {
   testWidgets('ConvivaApp renders Home for senior with mock events', (WidgetTester tester) async {

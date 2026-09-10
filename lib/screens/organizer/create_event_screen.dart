@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/colors.dart';
-import '../../core/typography.dart';
 import '../../core/state.dart';
 import '../../models/event.dart';
 
