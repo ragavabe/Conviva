@@ -248,6 +248,20 @@ class ConvivaEvent {
         return 'Confirme se você esteve lá →';
     }
   }
+
+  Color get actionCardTextColor {
+    if (isUserParticipating) {
+      return ConvivaColors.pineGreen;
+    }
+    switch (status) {
+      case EventStatus.upcoming:
+        return ConvivaColors.pineGreenText;
+      case EventStatus.full:
+        return ConvivaColors.terracotta;
+      case EventStatus.completed:
+        return ConvivaColors.ochreDark;
+    }
+  }
 }
 
 enum RideStatus { requested, accepted, inProgress, completed, cancelled }
@@ -618,6 +632,13 @@ class ConvivaState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Buffer para Desfazer Exclusão (Undo Delete)
+  ConvivaEvent? _lastDeletedEvent;
+  int? _lastDeletedIndex;
+  List<RideRequest> _lastDeletedRides = [];
+
+  bool get canUndoDelete => _lastDeletedEvent != null;
+
   void addEvent(ConvivaEvent newEvent) {
     _events.insert(0, newEvent);
     notifyListeners();
@@ -631,9 +652,142 @@ class ConvivaState extends ChangeNotifier {
     }
   }
 
+  void updateEventStatus(String eventId, EventStatus newStatus) {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx != -1) {
+      _events[idx].status = newStatus;
+      notifyListeners();
+    }
+  }
+
+  void duplicateEvent(String eventId) {
+    final original = _events.firstWhere((e) => e.id == eventId);
+    final copy = ConvivaEvent(
+      id: 'ev_${DateTime.now().millisecondsSinceEpoch}',
+      title: '${original.title} (Cópia)',
+      dateFormatted: original.dateFormatted,
+      location: original.location,
+      distance: original.distance,
+      category: original.category,
+      description: original.description,
+      status: original.status,
+      confirmedCount: 0,
+      maxSpots: original.maxSpots,
+      organizerId: original.organizerId,
+      participants: [],
+      isUserParticipating: false,
+      userConfirmedAttendance: false,
+    );
+    _events.insert(0, copy);
+    notifyListeners();
+  }
+
   void deleteEvent(String eventId) {
-    _events.removeWhere((e) => e.id == eventId);
-    _rides.removeWhere((r) => r.eventId == eventId);
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx != -1) {
+      _lastDeletedEvent = _events[idx];
+      _lastDeletedIndex = idx;
+      _lastDeletedRides = _rides.where((r) => r.eventId == eventId).toList();
+
+      _events.removeAt(idx);
+      _rides.removeWhere((r) => r.eventId == eventId);
+      notifyListeners();
+    }
+  }
+
+  bool undoDeleteEvent() {
+    if (_lastDeletedEvent != null) {
+      final insertIdx = (_lastDeletedIndex ?? 0).clamp(0, _events.length);
+      _events.insert(insertIdx, _lastDeletedEvent!);
+      _rides.addAll(_lastDeletedRides);
+      _lastDeletedEvent = null;
+      _lastDeletedIndex = null;
+      _lastDeletedRides = [];
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  void addParticipantToEvent(String eventId, EventParticipant participant) {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx != -1) {
+      _events[idx].participants.insert(0, participant);
+      _events[idx].confirmedCount += 1;
+      notifyListeners();
+    }
+  }
+
+  void removeParticipantFromEvent(String eventId, String participantId) {
+    final idx = _events.indexWhere((e) => e.id == eventId);
+    if (idx != -1) {
+      final pIndex = _events[idx].participants.indexWhere((p) => p.id == participantId);
+      if (pIndex != -1) {
+        _events[idx].participants.removeAt(pIndex);
+        _events[idx].confirmedCount = (_events[idx].confirmedCount - 1).clamp(0, 9999);
+        notifyListeners();
+      }
+    }
+  }
+
+  void resetToMockupData() {
+    _events.clear();
+    _rides.clear();
+    _initSeedData();
+    notifyListeners();
+  }
+
+  void seedExtraEvents() {
+    final p1 = EventParticipant(
+      id: 'px1',
+      name: 'Margarida Lima',
+      initials: 'ML',
+      timeAgo: 'Confirmou há 1 hora',
+      phone: '(11) 98111-2233',
+      isPresent: true,
+    );
+    final p2 = EventParticipant(
+      id: 'px2',
+      name: 'Geraldo Antunes',
+      initials: 'GA',
+      timeAgo: 'Confirmou ontem',
+      phone: '(11) 97222-3344',
+      isPresent: true,
+    );
+    _events.add(
+      ConvivaEvent(
+        id: 'ev_extra_1',
+        title: 'Oficina de Jardinagem e Plantas',
+        dateFormatted: 'Quarta, 25 de setembro · 10h00',
+        location: 'Horta Comunitária das Palmeiras',
+        distance: '0,9 km de você',
+        category: 'Natureza & Horta',
+        description:
+            'Aprenda a cuidar de suculentas, ervas medicinais e temperos caseiros. Todo material incluso com café da manhã colaborativo.',
+        status: EventStatus.upcoming,
+        confirmedCount: 14,
+        maxSpots: 20,
+        organizerId: 'org_carlos',
+        participants: [p1, p2],
+      ),
+    );
+    _events.add(
+      ConvivaEvent(
+        id: 'ev_extra_2',
+        title: 'Clube da Leitura & Memórias',
+        dateFormatted: 'Segunda, 30 de setembro · 14h30',
+        location: 'Biblioteca Municipal Central',
+        distance: '2,1 km de você',
+        category: 'Cultura & Livros',
+        description:
+            'Roda de conversa sobre contos brasileiros clássicos e memórias da infância. Ambiente com acessibilidade e poltronas confortáveis.',
+        status: EventStatus.upcoming,
+        confirmedCount: 8,
+        maxSpots: 15,
+        organizerId: 'org_carlos',
+        participants: [p1],
+      ),
+    );
     notifyListeners();
   }
 
@@ -1676,8 +1830,121 @@ class _SeniorMainShellState extends State<SeniorMainShell> {
 }
 
 // TELA INICIAL DO IDOSO - IDÊNTICA AO MOCKUP 01-home.png
-class SeniorHomeScreen extends StatelessWidget {
+// BARRA DE ALTERNÂNCIA RÁPIDA DE PERFIS (HACKATHON / DEMO)
+class PersonaSwitcher extends StatelessWidget {
+  const PersonaSwitcher({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ConvivaState.instance;
+    final currentRole = state.currentUser?.role ?? UserRole.senior;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFECE4D0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ConvivaColors.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildRoleButton(
+              context: context,
+              label: '👵 Idosa',
+              isActive: currentRole == UserRole.senior,
+              onTap: () => state.switchRole(UserRole.senior),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _buildRoleButton(
+              context: context,
+              label: '📋 Organizador',
+              isActive: currentRole == UserRole.organizer,
+              onTap: () => state.switchRole(UserRole.organizer),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: _buildRoleButton(
+              context: context,
+              label: '🚗 Motorista',
+              isActive: currentRole == UserRole.driver,
+              onTap: () => state.switchRole(UserRole.driver),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleButton({
+    required BuildContext context,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? ConvivaColors.pineGreen : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: isActive ? Colors.white : ConvivaColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// TELA INICIAL DO IDOSO - IDÊNTICA AO MOCKUP 01-home.png COM BUSCA, FILTROS E AÇÕES DE CRUD
+class SeniorHomeScreen extends StatefulWidget {
   const SeniorHomeScreen({super.key});
+
+  @override
+  State<SeniorHomeScreen> createState() => _SeniorHomeScreenState();
+}
+
+class _SeniorHomeScreenState extends State<SeniorHomeScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  String _selectedFilter = 'Todos'; // 'Todos', 'Em breve', 'Lotados', 'Aconteceu', 'Meus'
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openMockupsModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const MockupInspectionSheet(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1687,13 +1954,40 @@ class SeniorHomeScreen extends StatelessWidget {
       animation: state,
       builder: (context, _) {
         final user = state.currentUser;
-        final events = state.events;
+        final allEvents = state.events;
+
+        // Filtragem em tempo real
+        final query = _searchQuery.toLowerCase().trim();
+        final filteredEvents = allEvents.where((e) {
+          if (_selectedFilter == 'Em breve' && e.status != EventStatus.upcoming) {
+            return false;
+          }
+          if (_selectedFilter == 'Lotados' && e.status != EventStatus.full) {
+            return false;
+          }
+          if (_selectedFilter == 'Aconteceu' && e.status != EventStatus.completed) {
+            return false;
+          }
+          if (_selectedFilter == 'Meus' && !e.isUserParticipating) {
+            return false;
+          }
+          if (query.isNotEmpty) {
+            final matchTitle = e.title.toLowerCase().contains(query);
+            final matchCat = e.category.toLowerCase().contains(query);
+            final matchLoc = e.location.toLowerCase().contains(query);
+            return matchTitle || matchCat || matchLoc;
+          }
+          return true;
+        }).toList();
 
         return Scaffold(
           body: SafeArea(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               children: [
+                // Barra de Troca Rápida de Persona (Dona Marta, Carlos, Roberto)
+                const PersonaSwitcher(),
+
                 // Cabeçalho acolhedor com Saudação e Mãozinha 👋 (01-home.png)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1723,7 +2017,6 @@ class SeniorHomeScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Indicador de perfil ativo
                     CircleAvatar(
                       radius: 22,
                       backgroundColor: ConvivaColors.pineGreenLight,
@@ -1739,42 +2032,197 @@ class SeniorHomeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
-                // Seção "Eventos próximos"
+                // BARRA DE PESQUISA EM TEMPO REAL
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: ConvivaColors.border, width: 1.2),
+                  ),
+                  child: TextField(
+                    controller: _searchCtrl,
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    style: const TextStyle(fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Buscar evento, local ou oficina...',
+                      hintStyle: const TextStyle(
+                        fontSize: 15,
+                        color: ConvivaColors.textMuted,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.search_rounded,
+                        color: ConvivaColors.pineGreen,
+                      ),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 20),
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                // FILTROS HORIZONTAIS EM CHIPS
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildFilterChip('Todos', 'Todos', allEvents.length),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        '🌱 Em breve',
+                        'Em breve',
+                        allEvents.where((e) => e.status == EventStatus.upcoming).length,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        '🔒 Lotados',
+                        'Lotados',
+                        allEvents.where((e) => e.status == EventStatus.full).length,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        '✨ Aconteceu',
+                        'Aconteceu',
+                        allEvents.where((e) => e.status == EventStatus.completed).length,
+                      ),
+                      const SizedBox(width: 8),
+                      _buildFilterChip(
+                        '⭐ Meus Eventos',
+                        'Meus',
+                        allEvents.where((e) => e.isUserParticipating).length,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                // BOTÕES DE AÇÕES RÁPIDAS (MOCKUP + NOVO EVENTO)
                 Row(
-                  children: const [
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     Text(
-                      'Eventos próximos',
-                      style: TextStyle(
+                      'Eventos (${filteredEvents.length})',
+                      style: const TextStyle(
                         fontFamily: 'serif',
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: ConvivaColors.textPrimary,
                       ),
                     ),
+                    Row(
+                      children: [
+                        OutlinedButton.icon(
+                          onPressed: () => _openMockupsModal(context),
+                          icon: const Icon(Icons.photo_library_outlined, size: 16),
+                          label: const Text('Mockups', style: TextStyle(fontSize: 13)),
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            minimumSize: const Size(0, 34),
+                            side: const BorderSide(color: ConvivaColors.border),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const CreateEventScreen(),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.add, size: 16),
+                          label: const Text('+ Criar', style: TextStyle(fontSize: 13)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ConvivaColors.pineGreen,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            minimumSize: const Size(0, 34),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 const SizedBox(height: 14),
 
-                // Lista de Cards de Eventos (01-home.png)
-                ...events.map(
-                  (event) => Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: EventCard(
-                      event: event,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                EventDetailsScreen(eventId: event.id),
+                // LISTA DE CARDS DE EVENTOS OU ESTADO VAZIO
+                if (filteredEvents.isEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(32),
+                    margin: const EdgeInsets.only(top: 20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: ConvivaColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.event_busy_outlined,
+                          size: 52,
+                          color: ConvivaColors.textMuted,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Nenhum evento encontrado',
+                          style: ConvivaTypography.titleSerifSmall,
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Tente buscar por outro termo ou limpe os filtros para ver todas as atividades.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: ConvivaColors.textSecondary,
                           ),
-                        );
-                      },
+                        ),
+                        const SizedBox(height: 18),
+                        OutlinedButton(
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() {
+                              _searchQuery = '';
+                              _selectedFilter = 'Todos';
+                            });
+                          },
+                          child: const Text('Limpar Filtros'),
+                        ),
+                      ],
                     ),
                   ),
-                ),
+                ] else ...[
+                  ...filteredEvents.map(
+                    (event) => Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: EventCard(
+                        event: event,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  EventDetailsScreen(eventId: event.id),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -1782,17 +2230,80 @@ class SeniorHomeScreen extends StatelessWidget {
       },
     );
   }
+
+  Widget _buildFilterChip(String label, String value, int count) {
+    final isSelected = _selectedFilter == value;
+    return ChoiceChip(
+      label: Text('$label ($count)'),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) setState(() => _selectedFilter = value);
+      },
+      selectedColor: ConvivaColors.pineGreenLight,
+      backgroundColor: Colors.white,
+      side: BorderSide(
+        color: isSelected ? ConvivaColors.pineGreen : ConvivaColors.border,
+      ),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? ConvivaColors.pineGreenText : ConvivaColors.textSecondary,
+      ),
+    );
+  }
 }
 
-// CARD DE EVENTO FIEL AO 01-home.png E COM TODOS OS REQUISITOS DO BRIEFING
+// CARD DE EVENTO FIEL AO 01-home.png COM MENU DE CRUD DIRETO (EDITAR, DUPLICAR, EXCLUIR)
 class EventCard extends StatelessWidget {
   final ConvivaEvent event;
   final VoidCallback onTap;
 
   const EventCard({super.key, required this.event, required this.onTap});
 
+  void _showDeleteDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Excluir evento?'),
+        content: Text('Deseja realmente excluir "${event.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final state = ConvivaState.instance;
+              state.deleteEvent(event.id);
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Evento "${event.title}" excluído.'),
+                  backgroundColor: ConvivaColors.textPrimary,
+                  action: SnackBarAction(
+                    label: 'Desfazer',
+                    textColor: Colors.amber,
+                    onPressed: () {
+                      state.undoDeleteEvent();
+                    },
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ConvivaColors.terracotta,
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = ConvivaState.instance;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1817,7 +2328,7 @@ class EventCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Topo do card: Título Serifado e Badge de Status
+                // Topo do card: Título Serifado, Badge de Status e Menu de Ações
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1827,7 +2338,7 @@ class EventCard extends StatelessWidget {
                         style: ConvivaTypography.titleSerifMedium,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -1845,6 +2356,67 @@ class EventCard extends StatelessWidget {
                           color: event.statusBadgeTextColor,
                         ),
                       ),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: const Icon(
+                        Icons.more_vert,
+                        size: 20,
+                        color: ConvivaColors.textMuted,
+                      ),
+                      padding: EdgeInsets.zero,
+                      onSelected: (val) {
+                        if (val == 'edit') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  CreateEventScreen(eventToEdit: event),
+                            ),
+                          );
+                        } else if (val == 'duplicate') {
+                          state.duplicateEvent(event.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Evento duplicado com sucesso!'),
+                              backgroundColor: ConvivaColors.pineGreen,
+                            ),
+                          );
+                        } else if (val == 'delete') {
+                          _showDeleteDialog(context);
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Editar'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'duplicate',
+                          child: Row(
+                            children: [
+                              Icon(Icons.copy_outlined, size: 18),
+                              SizedBox(width: 8),
+                              Text('Duplicar'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 18, color: ConvivaColors.terracotta),
+                              SizedBox(width: 8),
+                              Text('Excluir', style: TextStyle(color: ConvivaColors.terracotta)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1947,18 +2519,14 @@ class EventCard extends StatelessWidget {
                 // Botão de Ação no Rodapé do Card com Seta Indicativa (01-home.png)
                 Row(
                   children: [
-                    Text(
-                      event.actionCardText,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: event.isUserParticipating
-                            ? ConvivaColors.pineGreen
-                            : (event.status == EventStatus.full
-                                  ? ConvivaColors.terracotta
-                                  : (event.status == EventStatus.completed
-                                        ? ConvivaColors.ochreDark
-                                        : ConvivaColors.pineGreenText)),
+                    Expanded(
+                      child: Text(
+                        event.actionCardText,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: event.actionCardTextColor,
+                        ),
                       ),
                     ),
                   ],
@@ -1971,6 +2539,7 @@ class EventCard extends StatelessWidget {
     );
   }
 }
+
 
 // TELA DE DETALHES DO EVENTO (Fiel a 02-evento-futuro, 03-lotado e 04-realizado)
 class EventDetailsScreen extends StatefulWidget {
