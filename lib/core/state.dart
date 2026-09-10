@@ -25,16 +25,8 @@ class ConvivaState extends ChangeNotifier {
   List<RideRequest> get rides => List.unmodifiable(_rides);
 
   void _initSeedData() {
-    // 1. Usuário idoso padrão (fiel ao mockup: Dona Marta)
-    final donaMarta = AppUser(
-      id: 'user_marta',
-      name: 'Dona Marta',
-      email: 'marta@conviva.com',
-      role: UserRole.senior,
-      phone: '(11) 98765-4321',
-      address: 'Rua das Camélias, 120 - Jardim das Flores',
-    );
-    _currentUser = donaMarta;
+    // Inicia sem usuário autenticado para exibir a tela de login como porta de entrada
+    _currentUser = null;
 
     // 2. Participantes idosos com iniciais elegantes (como nos mockups 02, 03, 04)
     final p1 = EventParticipant(
