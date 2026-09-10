@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import '../../core/colors.dart';
-import '../../core/typography.dart';
-import '../../core/state.dart';
-import '../../models/app_user.dart';
+
+import '../../core/theme/app_colors.dart';
+import '../../core/state/app_state.dart';
 import '../../core/services/facebook_auth_service.dart';
-import 'senior_signup_screen.dart';
-import 'organizer_signup_screen.dart';
-import 'driver_signup_screen.dart';
+import '../../models/pessoa.dart';
+import '../../models/tipo_usuario.dart';
+import 'login_flow.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,17 +23,25 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim().toLowerCase();
-      final state = ConvivaState.instance;
 
+      TipoUsuario tipo;
       if (email.contains('carlos') || email.contains('org')) {
-        state.switchRole(UserRole.organizer);
+        tipo = TipoUsuario.organizador;
       } else if (email.contains('roberto') ||
           email.contains('mot') ||
           email.contains('motorista')) {
-        state.switchRole(UserRole.driver);
+        tipo = TipoUsuario.motorista;
       } else {
-        state.switchRole(UserRole.senior);
+        tipo = TipoUsuario.usuario;
       }
+
+      AppState.instance.login(
+        Pessoa(
+          nome: email.split('@').first,
+          documento: 'DEMO-$email',
+          tipo: tipo,
+        ),
+      );
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -42,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
             'Bem-vindo(a) de volta ao CONVIVA!',
             style: TextStyle(fontSize: 16),
           ),
-          backgroundColor: ConvivaColors.pineGreen,
+          backgroundColor: AppColors.verde,
         ),
       );
     }
@@ -50,9 +57,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleFacebookLogin() async {
     // Permite escolher o papel desejado ao entrar com Facebook
-    final selectedRole = await showModalBottomSheet<UserRole>(
+    final selectedTipo = await showModalBottomSheet<TipoUsuario>(
       context: context,
-      backgroundColor: ConvivaColors.background,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -67,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: 44,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: ConvivaColors.border,
+                  color: AppColors.textoSecundario.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -79,95 +86,72 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(width: 10),
                 Text(
                   'Entrar com Facebook',
-                  style: ConvivaTypography.titleSerifMedium,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
               ],
             ),
             const SizedBox(height: 8),
             const Text(
               'Escolha com qual perfil você gostaria de acessar o aplicativo:',
-              style: ConvivaTypography.bodyMedium,
+              style: TextStyle(fontSize: 14, color: AppColors.textoSecundario),
             ),
             const SizedBox(height: 20),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: ConvivaColors.pineGreenLight,
-                child: Icon(Icons.person, color: ConvivaColors.pineGreen),
+            for (final tipo in TipoUsuario.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: tipo.cor.withValues(alpha: 0.15),
+                    child: Icon(tipo.icone, color: tipo.cor),
+                  ),
+                  title: Text(
+                    tipo.label,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(tipo.descricao),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    side: BorderSide(color: tipo.cor.withValues(alpha: 0.3)),
+                  ),
+                  tileColor: Colors.white,
+                  onTap: () => Navigator.pop(ctx, tipo),
+                ),
               ),
-              title: const Text('Usuário / Idoso (Padrão)', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Descobrir eventos e interagir'),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: ConvivaColors.border),
-              ),
-              tileColor: Colors.white,
-              onTap: () => Navigator.pop(ctx, UserRole.senior),
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: ConvivaColors.terracottaLight,
-                child: Icon(Icons.event, color: ConvivaColors.terracotta),
-              ),
-              title: const Text('Organizador de Eventos', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Criar e gerenciar atividades'),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: ConvivaColors.border),
-              ),
-              tileColor: Colors.white,
-              onTap: () => Navigator.pop(ctx, UserRole.organizer),
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: const CircleAvatar(
-                backgroundColor: ConvivaColors.ochreLight,
-                child: Icon(Icons.directions_car, color: ConvivaColors.ochre),
-              ),
-              title: const Text('Motorista Solidário', style: TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: const Text('Oferecer transporte aos participantes'),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: const BorderSide(color: ConvivaColors.border),
-              ),
-              tileColor: Colors.white,
-              onTap: () => Navigator.pop(ctx, UserRole.driver),
-            ),
           ],
         ),
       ),
     );
 
-    if (selectedRole == null) return;
+    if (selectedTipo == null) return;
 
     setState(() => _isFacebookLoading = true);
     try {
-      final result = await FacebookAuthService.instance.login(role: selectedRole);
+      final result = await FacebookAuthService.instance.login(
+        tipo: selectedTipo,
+      );
 
       if (!mounted) return;
 
-      if (result.isSuccess && result.user != null) {
-        ConvivaState.instance.login(result.user!);
+      if (result.isSuccess && result.pessoa != null) {
+        AppState.instance.login(result.pessoa!);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Bem-vindo(a), ${result.user!.name}!',
+              'Bem-vindo(a), ${result.pessoa!.nome}!',
               style: const TextStyle(fontSize: 16),
             ),
-            backgroundColor: ConvivaColors.pineGreen,
+            backgroundColor: AppColors.verde,
           ),
         );
       } else if (result.isCancelled) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login com Facebook cancelado.'),
-          ),
+          const SnackBar(content: Text('Login com Facebook cancelado.')),
         );
       } else if (result.errorMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.errorMessage!),
-            backgroundColor: ConvivaColors.terracotta,
+            backgroundColor: AppColors.laranja,
           ),
         );
       }
@@ -179,150 +163,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showSignupOptionsModal() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: ConvivaColors.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 36),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 48,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: ConvivaColors.border,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Escolha seu perfil no CONVIVA',
-              textAlign: TextAlign.center,
-              style: ConvivaTypography.titleSerifMedium,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Cada perfil possui uma experiência adaptada às suas necessidades.',
-              textAlign: TextAlign.center,
-              style: ConvivaTypography.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            _buildRoleSelectionTile(
-              title: 'Usuário / Idoso',
-              description:
-                  'Descobrir eventos, interagir e solicitar transporte',
-              icon: Icons.person_rounded,
-              color: ConvivaColors.pineGreen,
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SeniorSignupScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildRoleSelectionTile(
-              title: 'Organizador de Eventos',
-              description: 'Criar atividades, divulgar e gerenciar presença',
-              icon: Icons.event_available_rounded,
-              color: ConvivaColors.terracotta,
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const OrganizerSignupScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 12),
-            _buildRoleSelectionTile(
-              title: 'Motorista Solidário',
-              description: 'Apoiar na mobilidade e levar idosos aos eventos',
-              icon: Icons.directions_car_filled_rounded,
-              color: ConvivaColors.ochre,
-              onTap: () {
-                Navigator.pop(ctx);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const DriverSignupScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleSelectionTile({
-    required String title,
-    required String description,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: ConvivaColors.border, width: 1.2),
-        ),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: ConvivaColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: ConvivaColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: ConvivaColors.textSecondary,
-            ),
-          ],
-        ),
-      ),
+    // As telas de cadastro por tipo (idoso/organizador/motorista) já existem
+    // no fluxo EscolhaTipoPage -> FormularioPage, então reaproveitamos o LoginFlow.
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginFlow()),
     );
   }
 
@@ -347,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: ConvivaColors.pineGreen,
+                        color: AppColors.verde,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: Row(
@@ -381,7 +226,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       fontFamily: 'serif',
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
-                      color: ConvivaColors.textPrimary,
+                      color: AppColors.texto,
                       height: 1.3,
                     ),
                   ),
@@ -391,10 +236,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: ConvivaColors.pineGreenLight,
+                      color: AppColors.verde.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: ConvivaColors.pineGreen.withValues(alpha: 0.3),
+                        color: AppColors.verde.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Column(
@@ -405,7 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             Icon(
                               Icons.touch_app_rounded,
                               size: 20,
-                              color: ConvivaColors.pineGreen,
+                              color: AppColors.verde,
                             ),
                             SizedBox(width: 8),
                             Text(
@@ -413,7 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: ConvivaColors.pineGreenText,
+                                color: AppColors.verdeEscuro,
                               ),
                             ),
                           ],
@@ -421,32 +266,26 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            Expanded(
-                              child: _buildQuickLoginChip(
-                                label: '👵 Idosa',
-                                onTap: () => ConvivaState.instance.switchRole(
-                                  UserRole.senior,
+                            for (final tipo in TipoUsuario.values) ...[
+                              Expanded(
+                                child: _buildQuickLoginChip(
+                                  label: switch (tipo) {
+                                    TipoUsuario.usuario => '👵 Idosa',
+                                    TipoUsuario.organizador => '📋 Organizador',
+                                    TipoUsuario.motorista => '🚗 Motorista',
+                                  },
+                                  onTap: () => AppState.instance.login(
+                                    Pessoa(
+                                      nome: 'Demo ${tipo.label}',
+                                      documento: 'DEMO-${tipo.name}',
+                                      tipo: tipo,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildQuickLoginChip(
-                                label: '📋 Organizador',
-                                onTap: () => ConvivaState.instance.switchRole(
-                                  UserRole.organizer,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: _buildQuickLoginChip(
-                                label: '🚗 Motorista',
-                                onTap: () => ConvivaState.instance.switchRole(
-                                  UserRole.driver,
-                                ),
-                              ),
-                            ),
+                              if (tipo != TipoUsuario.values.last)
+                                const SizedBox(width: 8),
+                            ],
                           ],
                         ),
                       ],
@@ -463,11 +302,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'E-mail',
                       prefixIcon: Icon(
                         Icons.email_outlined,
-                        color: ConvivaColors.textSecondary,
+                        color: AppColors.textoSecundario,
                       ),
                     ),
-                    validator: (val) =>
-                        val == null || val.isEmpty ? 'Informe seu e-mail' : null,
+                    validator: (val) => val == null || val.isEmpty
+                        ? 'Informe seu e-mail'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -478,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Senha',
                       prefixIcon: Icon(
                         Icons.lock_outline_rounded,
-                        color: ConvivaColors.textSecondary,
+                        color: AppColors.textoSecundario,
                       ),
                     ),
                     validator: (val) =>
@@ -495,7 +335,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     height: 52,
                     child: ElevatedButton.icon(
-                      onPressed: _isFacebookLoading ? null : _handleFacebookLogin,
+                      onPressed: _isFacebookLoading
+                          ? null
+                          : _handleFacebookLogin,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1877F2),
                         foregroundColor: Colors.white,
@@ -528,19 +370,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 16),
                   Row(
-                    children: const [
-                      Expanded(child: Divider(color: ConvivaColors.border)),
-                      Padding(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: AppColors.textoSecundario.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
+                      ),
+                      const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 12),
                         child: Text(
                           'ou',
                           style: TextStyle(
-                            color: ConvivaColors.textSecondary,
+                            color: AppColors.textoSecundario,
                             fontSize: 14,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: ConvivaColors.border)),
+                      Expanded(
+                        child: Divider(
+                          color: AppColors.textoSecundario.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -562,13 +416,16 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: const [
                               Icon(
                                 Icons.support_agent_rounded,
-                                color: ConvivaColors.pineGreen,
+                                color: AppColors.verde,
                                 size: 28,
                               ),
                               SizedBox(width: 10),
                               Text(
                                 'Apoio ao Usuário',
-                                style: ConvivaTypography.titleSerifSmall,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ],
                           ),
@@ -576,7 +433,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Olá! Se você tiver qualquer dúvida ou dificuldade para entrar no aplicativo, nosso time comunitário está pronto para te apoiar com todo carinho:\n\n📞 Telefone / WhatsApp: (11) 98765-4321',
                             style: TextStyle(
                               fontSize: 15,
-                              color: ConvivaColors.textPrimary,
+                              color: AppColors.texto,
                               height: 1.45,
                             ),
                           ),
@@ -584,7 +441,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ElevatedButton(
                               onPressed: () => Navigator.pop(ctx),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: ConvivaColors.pineGreen,
+                                backgroundColor: AppColors.verde,
                               ),
                               child: const Text('Entendi, obrigado! ✨'),
                             ),
@@ -600,14 +457,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           Icon(
                             Icons.help_outline_rounded,
                             size: 18,
-                            color: ConvivaColors.textSecondary,
+                            color: AppColors.textoSecundario,
                           ),
                           SizedBox(width: 6),
                           Text(
                             'Precisa de ajuda para entrar? Toque aqui',
                             style: TextStyle(
                               fontSize: 14,
-                              color: ConvivaColors.textSecondary,
+                              color: AppColors.textoSecundario,
                               decoration: TextDecoration.underline,
                             ),
                           ),
@@ -637,16 +494,14 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: ConvivaColors.pineGreen.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: AppColors.verde.withValues(alpha: 0.3)),
         ),
         child: Text(
           label,
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
-            color: ConvivaColors.pineGreenText,
+            color: AppColors.verdeEscuro,
           ),
         ),
       ),
