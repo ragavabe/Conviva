@@ -41,6 +41,17 @@ O aplicativo foi construído com rigorosa fidelidade estética aos mockups visua
 - Modal com abas para comparar as telas reais com os 4 mockups PNG originais (`01`, `02`, `03`, `04`).
 - Botão para restaurar os dados originais dos mockups a qualquer momento.
 
+### 5. Integração com Login Social (Facebook SDK)
+
+- **Login com Facebook Oficial**: Suporte a autenticação direta via Facebook SDK (`flutter_facebook_auth`) sem necessidade de backend complexo.
+- **Obtenção de Perfil**: Coleta automática de nome, foto de alta resolução e link de perfil público do usuário.
+- **Integração com o Perfil e Avatares**: Exibição da foto real da conta nos avatares e botão direto para abrir o perfil público do usuário no app do Facebook via `url_launcher`.
+- **Configurações Android prontas**: `strings.xml` com o `facebook_app_id` e `facebook_client_token`, além das permissões e intents no `AndroidManifest.xml`.
+- **Gerar Hash de Chave Debug para o Facebook Console (se necessário)**:
+  ```bash
+  keytool -exportcert -alias androiddebugkey -keystore ~/.android/debug.keystore | openssl sha1 -binary | openssl base64
+  ```
+
 ---
 
 ## 📱 Como Executar

@@ -110,15 +110,20 @@ class _SeniorHomeScreenState extends State<SeniorHomeScreen> {
                     CircleAvatar(
                       radius: 22,
                       backgroundColor: ConvivaColors.pineGreenLight,
-                      child: Text(
-                        user?.initials ?? 'DM',
-                        style: const TextStyle(
-                          fontFamily: 'serif',
-                          fontWeight: FontWeight.bold,
-                          color: ConvivaColors.pineGreen,
-                          fontSize: 16,
-                        ),
-                      ),
+                      backgroundImage: user?.pictureUrl != null
+                          ? NetworkImage(user!.pictureUrl!)
+                          : null,
+                      child: user?.pictureUrl == null
+                          ? Text(
+                              user?.initials ?? 'DM',
+                              style: const TextStyle(
+                                fontFamily: 'serif',
+                                fontWeight: FontWeight.bold,
+                                color: ConvivaColors.pineGreen,
+                                fontSize: 16,
+                              ),
+                            )
+                          : null,
                     ),
                   ],
                 ),

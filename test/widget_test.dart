@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:conviva/app.dart';
 
@@ -10,6 +11,11 @@ void main() {
     expect(find.textContaining('Dona Marta'), findsWidgets);
     // Verify event card from 01-home.png
     expect(find.text('Bazar de Artesanato'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Tarde de Bingo Solidário'),
+      300.0,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Tarde de Bingo Solidário'), findsOneWidget);
   });
 }

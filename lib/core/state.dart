@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/app_user.dart';
 import '../models/event.dart';
 import '../models/ride.dart';
+import 'services/facebook_auth_service.dart';
 
 class ConvivaState extends ChangeNotifier {
   static final ConvivaState instance = ConvivaState._internal();
@@ -222,6 +223,7 @@ class ConvivaState extends ChangeNotifier {
   }
 
   void logout() {
+    FacebookAuthService.instance.logOut();
     _currentUser = null;
     notifyListeners();
   }

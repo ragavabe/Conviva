@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/colors.dart';
 import '../../core/typography.dart';
 import '../../core/state.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/app_user.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -29,17 +30,22 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     CircleAvatar(
-                      radius: 40,
+                      radius: 46,
                       backgroundColor: ConvivaColors.pineGreenLight,
-                      child: Text(
-                        user?.initials ?? 'CO',
-                        style: const TextStyle(
-                          fontFamily: 'serif',
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: ConvivaColors.pineGreen,
-                        ),
-                      ),
+                      backgroundImage: user?.pictureUrl != null
+                          ? NetworkImage(user!.pictureUrl!)
+                          : null,
+                      child: user?.pictureUrl == null
+                          ? Text(
+                              user?.initials ?? 'CO',
+                              style: const TextStyle(
+                                fontFamily: 'serif',
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: ConvivaColors.pineGreen,
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -73,10 +79,35 @@ class ProfileScreen extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (user?.profileUrl != null) ...[
+                      const SizedBox(height: 14),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(user!.profileUrl!);
+                          final launched = await launchUrl(
+                            uri,
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!launched && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Não foi possível abrir o perfil no Facebook.'),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                        label: const Text('Ver Perfil no Facebook'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(220, 42),
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
               // SELETOR RÁPIDO DE PERFIL (para demonstração de hackathon)
               Container(

@@ -9,6 +9,8 @@ class AppUser {
   final String? address;
   final String? document; // CPF ou CNPJ para organizador
   final String? accessCode; // Código do motorista
+  final String? pictureUrl; // Foto de perfil (Facebook ou rede)
+  final String? profileUrl; // Link do perfil do Facebook
 
   AppUser({
     required this.id,
@@ -19,6 +21,8 @@ class AppUser {
     this.address,
     this.document,
     this.accessCode,
+    this.pictureUrl,
+    this.profileUrl,
   });
 
   String get initials {
