@@ -7,6 +7,7 @@ class Evento {
   String local;
   int capacidade;
   final List<String> participantes;
+  final Set<String> presentes;
   bool realizado;
 
   Evento({
@@ -18,9 +19,14 @@ class Evento {
     required this.local,
     required this.capacidade,
     List<String>? participantes,
+    Set<String>? presentes,
     this.realizado = false,
-  }) : participantes = participantes ?? [];
+  })  : participantes = participantes ?? [],
+        presentes = presentes ?? {};
 
   bool get lotado => participantes.length >= capacidade;
   int get vagasRestantes => capacidade - participantes.length;
+  int get totalPresentes => presentes.length;
+  bool estaPresente(String nome) => presentes.contains(nome);
 }
+
