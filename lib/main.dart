@@ -4200,7 +4200,15 @@ class OrganizerEventsScreen extends StatelessWidget {
               ConvivaState.instance.deleteEvent(event.id);
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Evento removido com sucesso.')),
+                SnackBar(
+                  content: const Text('Evento removido com sucesso.'),
+                  action: SnackBarAction(
+                    label: 'Desfazer',
+                    onPressed: () {
+                      ConvivaState.instance.undoDeleteEvent();
+                    },
+                  ),
+                ),
               );
             },
             style: ElevatedButton.styleFrom(
@@ -5340,5 +5348,365 @@ class ProfileScreen extends StatelessWidget {
       default:
         return 'Visitante';
     }
+  }
+}
+
+// ============================================================================
+// 10. TELAS DE CRUD (CRIAR/EDITAR) E DETALHES DE EVENTOS
+// ============================================================================
+
+class CreateEventScreen extends StatefulWidget {
+  const CreateEventScreen({super.key});
+
+  @override
+  State<CreateEventScreen> createState() => _CreateEventScreenState();
+}
+
+class _CreateEventScreenState extends State<CreateEventScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleCtrl = TextEditingController(text: 'Novo Evento');
+  final _dateCtrl = TextEditingController(text: 'Próximo sábado · 14h00');
+  final _locCtrl = TextEditingController(text: 'Centro Comunitário');
+  final _catCtrl = TextEditingController(text: 'Oficina & Bazar');
+  final _descCtrl = TextEditingController(text: 'Um evento incrível para a comunidade.');
+
+  void _submit() {
+    if (_formKey.currentState!.validate()) {
+      final state = ConvivaState.instance;
+      state.addEvent(ConvivaEvent(
+        id: 'ev_${DateTime.now().millisecondsSinceEpoch}',
+        title: _titleCtrl.text,
+        dateFormatted: _dateCtrl.text,
+        location: _locCtrl.text,
+        distance: '1,0 km de você',
+        category: _catCtrl.text,
+        description: _descCtrl.text,
+        status: EventStatus.upcoming,
+        confirmedCount: 1,
+        maxSpots: 30,
+        organizerId: state.currentUser?.id ?? 'org_carlos',
+        participants: [],
+      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento criado com sucesso!'), backgroundColor: ConvivaColors.pineGreen),
+      );
+      Navigator.pop(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Criar Evento')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleCtrl,
+                decoration: const InputDecoration(labelText: 'Título do Evento'),
+                validator: (v) => v!.isEmpty ? 'Informe o título' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _dateCtrl,
+                decoration: const InputDecoration(labelText: 'Data e Hora'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _locCtrl,
+                decoration: const InputDecoration(labelText: 'Local'),
+                validator: (v) => v!.isEmpty ? 'Informe o local' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _catCtrl,
+                decoration: const InputDecoration(labelText: 'Categoria'),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _descCtrl,
+                decoration: const InputDecoration(labelText: 'Descrição'),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(onPressed: _submit, child: const Text('Salvar Evento')),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class EventDetailsScreen extends StatelessWidget {
+  final String eventId;
+  const EventDetailsScreen({super.key, required this.eventId});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: ConvivaState.instance,
+      builder: (ctx, _) {
+        final state = ConvivaState.instance;
+        final eventIndex = state.events.indexWhere((e) => e.id == eventId);
+        if (eventIndex == -1) {
+          return Scaffold(appBar: AppBar(title: const Text('Não encontrado')));
+        }
+        final event = state.events[eventIndex];
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Detalhes do Evento'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.copy),
+                tooltip: 'Duplicar Evento',
+                onPressed: () {
+                  state.duplicateEvent(eventId);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Evento duplicado!')));
+                  Navigator.pop(context);
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: ConvivaColors.terracotta),
+                tooltip: 'Excluir',
+                onPressed: () {
+                  state.deleteEvent(eventId);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: const Text('Evento excluído.'),
+                    action: SnackBarAction(label: 'Desfazer', onPressed: state.undoDeleteEvent),
+                  ));
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(event.title, style: ConvivaTypography.titleSerifLarge),
+                const SizedBox(height: 8),
+                Text(event.dateFormatted, style: const TextStyle(color: ConvivaColors.textSecondary)),
+                const SizedBox(height: 12),
+                Text(event.description, style: ConvivaTypography.bodyLarge),
+                const SizedBox(height: 24),
+                
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: ConvivaColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: ConvivaColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Simulador Interativo de Status (Mockup)', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      Text('Status atual: ${event.statusBadgeLabel}', 
+                          style: TextStyle(fontWeight: FontWeight.bold, color: event.statusBadgeTextColor, fontSize: 16)),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: ConvivaColors.pineGreen),
+                              onPressed: () => state.updateEventStatus(eventId, EventStatus.upcoming),
+                              child: const Text('Em breve'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: ConvivaColors.terracotta),
+                              onPressed: () => state.updateEventStatus(eventId, EventStatus.full),
+                              child: const Text('Lotado'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(backgroundColor: ConvivaColors.ochre),
+                              onPressed: () => state.updateEventStatus(eventId, EventStatus.completed),
+                              child: const Text('Aconteceu'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                const Spacer(),
+                if (state.currentUser?.role == UserRole.senior)
+                  ElevatedButton(
+                    onPressed: () {
+                      state.toggleEventParticipation(eventId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: event.isUserParticipating ? Colors.grey : ConvivaColors.pineGreen,
+                    ),
+                    child: Text(event.isUserParticipating ? 'Cancelar Participação' : 'Confirmar Participação'),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class MockupInspectionSheet extends StatelessWidget {
+  const MockupInspectionSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.all(24),
+      height: 400,
+      child: Column(
+        children: [
+          const Text('Visualizador de Mockups', style: ConvivaTypography.titleSerifMedium),
+          const SizedBox(height: 24),
+          const Text('Você pode resetar os dados do aplicativo para o estado original dos mockups.', textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              ConvivaState.instance.resetToMockupData();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Dados restaurados para os mockups originais!')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: ConvivaColors.terracotta),
+            child: const Text('Resetar Dados (Fiel ao Mockup)'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// 11. TELAS PENDENTES (ORGANIZADOR, MOTORISTA, MEUS EVENTOS E TRANSPORTE)
+// ============================================================================
+
+class OrganizerMainShell extends StatelessWidget {
+  const OrganizerMainShell({super.key});
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Painel do Organizador em construção.', style: ConvivaTypography.titleSerifMedium)));
+}
+
+class DriverMainShell extends StatelessWidget {
+  const DriverMainShell({super.key});
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Painel do Motorista em construção.', style: ConvivaTypography.titleSerifMedium)));
+}
+
+class SeniorMyEventsScreen extends StatelessWidget {
+  const SeniorMyEventsScreen({super.key});
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Meus Eventos em construção.', style: ConvivaTypography.titleSerifMedium)));
+}
+
+class SeniorTransportScreen extends StatelessWidget {
+  const SeniorTransportScreen({super.key});
+  @override
+  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Transporte em construção.', style: ConvivaTypography.titleSerifMedium)));
+}
+
+
+// ============================================================================
+// VISUALIZADOR DE MOCKUPS INTERATIVO
+// ============================================================================
+class MockupInspectionSheet extends StatelessWidget {
+  const MockupInspectionSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 4,
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Visualizador de Mockups',
+                style: ConvivaTypography.titleSerifMedium,
+              ),
+            ),
+            const TabBar(
+              isScrollable: true,
+              labelColor: ConvivaColors.pineGreen,
+              unselectedLabelColor: ConvivaColors.textSecondary,
+              indicatorColor: ConvivaColors.pineGreen,
+              tabs: [
+                Tab(text: '01 Home'),
+                Tab(text: '02 Futuro'),
+                Tab(text: '03 Lotado'),
+                Tab(text: '04 Realizado'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _buildImageTab('01-home.png'),
+                  _buildImageTab('02-evento-futuro.png'),
+                  _buildImageTab('03-evento-lotado.png'),
+                  _buildImageTab('04-evento-realizado.png'),
+                ],
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    backgroundColor: ConvivaColors.pineGreen,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Fechar Visualizador'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageTab(String path) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Image.asset(
+          path,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            return Center(
+              child: Text('Imagem $path nÃ£o encontrada.'),
+            );
+          },
+        ),
+      ),
+    );
   }
 }
